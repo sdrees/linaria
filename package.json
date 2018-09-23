@@ -3,6 +3,7 @@
   "version": "1.0.0-alpha.5",
   "description": "Fast zero-runtime CSS in JS library",
   "main": "lib/index.js",
+  "bin": "./bin/linaria.js",
   "files": [
     "lib/",
     "react.js",
@@ -35,6 +36,7 @@
     "add-contributor": "all-contributors add",
     "prebuild": "del lib",
     "build": "babel src --out-dir lib --ignore '**/__tests__/**,**/__integration-tests__/**,**/__fixtures__/**' --source-maps && flow-copy-source -i '{**/__tests__/**,**/__integration-tests__/**,**/__fixtures__/**}' src lib",
+    "watch": "babel src --out-dir lib --ignore '**/__tests__/**,**/__integration-tests__/**,**/__fixtures__/**' --source-maps --watch",
     "prepare": "yarn build"
   },
   "devDependencies": {
@@ -63,7 +65,10 @@
     "@babel/plugin-syntax-dynamic-import": "^7.0.0",
     "@babel/register": "^7.0.0",
     "dedent": "^0.7.0",
+    "glob": "^7.1.3",
     "loader-utils": "^1.1.0",
+    "minimist": "^1.2.0",
+    "mkdirp": "^0.5.1",
     "postcss": "^7.0.2",
     "react-is": "^16.5.1",
     "source-map": "^0.7.3",
