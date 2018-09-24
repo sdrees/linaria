@@ -3,6 +3,7 @@
 import type { SourceMapGenerator } from 'source-map';
 
 const glob = require('glob');
+const fs = require('fs');
 const { transformFileSync } = require('@babel/core');
 const transform = require('./transform');
 
@@ -36,6 +37,9 @@ module.exports = function processFiles(
   return resolvedFiles.reduce((output, filename: string) => {
     const { code } = transformFileSync(filename, babelOptions);
     const { css, map } = transform(filename, code, sourceMaps);
+    if (map) {
+      map.setSourceContent(filename, fs.readFileSync(filename).toString());
+    }
     return {
       ...output,
       [filename]: { css, map: map || null },
