@@ -21,10 +21,10 @@ if (args.h || args.help) {
       '  --source-maps, -s     Generate source maps             [boolean]',
       '  --require-css, -r     Require CSS in original JS file  [boolean]',
       '  --out-dir, -o         Output directory                 [string]',
-      '  --config, -c          Path to Babel config file         string]',
+      '  --config, -c          Path to Babel config file        [string]',
       '',
       'Example:',
-      '  linaria -m ./file1.js ./file2.js',
+      '  linaria -s ./file1.js ./file2.js',
       '  linaria -o dist src/**/*.js',
     ].join('\n')
   );
@@ -34,10 +34,18 @@ if (args.h || args.help) {
   const requireCss = Boolean(args.r || args.requireCss);
   const config = args.c || args.config;
 
+  if (!args._.length) {
+    console.error(
+      'ERROR: Missing arguments. Please profile glob path to files for processing.'
+    );
+    process.exit(1);
+  }
+
   const styles = processFile(args._, {
     sourceMaps,
     babelConfig: config
       ? {
+          babelrc: false,
           configFile: config,
         }
       : undefined,
@@ -53,32 +61,27 @@ if (args.h || args.help) {
       .replace(path.extname(jsFilename), '.css');
     const cssOutput = path.join(outDir, folderStructure, cssFilename);
 
-    // Skip writing if the file already exists and the new CSS code is empty.
-    if (!fs.existsSync(cssOutput) || styles[jsFilename].css) {
-      mkdir.sync(path.dirname(cssOutput));
-      // Add source mapping URL
-      const cssContent = styles[jsFilename].map
-        ? `${
-            styles[jsFilename].css
-          }\n/*# sourceMappingURL=${cssFilename}.map */`
-        : styles[jsFilename].css;
+    mkdir.sync(path.dirname(cssOutput));
+    // Add source mapping URL
+    const cssContent = styles[jsFilename].map
+      ? `${styles[jsFilename].css}\n/*# sourceMappingURL=${cssFilename}.map */`
+      : styles[jsFilename].css;
 
-      fs.writeFileSync(cssOutput, cssContent);
+    fs.writeFileSync(cssOutput, cssContent);
 
-      // Add require to original JS file to import extracted CSS.
-      if (requireCss) {
-        fs.writeFileSync(
-          jsFilename,
-          `${fs.readFileSync(jsFilename).toString()}\nrequire('${path.relative(
-            path.dirname(jsFilename),
-            cssOutput
-          )}');`
-        );
-      }
+    // Add require to original JS file to import extracted CSS.
+    if (requireCss) {
+      fs.writeFileSync(
+        jsFilename,
+        `${fs.readFileSync(jsFilename).toString()}\nrequire('${path.relative(
+          path.dirname(jsFilename),
+          cssOutput
+        )}');`
+      );
+    }
 
-      if (styles[jsFilename].map) {
-        fs.writeFileSync(`${cssOutput}.map`, styles[jsFilename].map);
-      }
+    if (styles[jsFilename].map) {
+      fs.writeFileSync(`${cssOutput}.map`, styles[jsFilename].map);
     }
   });
 

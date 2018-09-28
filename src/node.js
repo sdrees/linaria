@@ -37,12 +37,18 @@ module.exports = function processFiles(
   return resolvedFiles.reduce((output, filename: string) => {
     const { code } = transformFileSync(filename, babelOptions);
     const { css, map } = transform(filename, code, sourceMaps);
+
+    if (!css) {
+      return output;
+    }
+
     if (map) {
       map.setSourceContent(filename, fs.readFileSync(filename).toString());
     }
+
     return {
       ...output,
-      [filename]: { css, map: map || null },
+      [filename]: { css, map: map ? map.toString() : null },
     };
   }, {});
 };
