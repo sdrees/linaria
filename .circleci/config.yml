@@ -37,7 +37,6 @@ jobs:
             at: ~/linaria
         - run: |
             yarn lint
-            yarn flow
             yarn typescript
   unit-tests:
       <<: *defaults
@@ -45,7 +44,7 @@ jobs:
         - attach_workspace:
             at: ~/linaria
         - run: |
-            yarn test:unit --coverage
+            yarn test --coverage
             cat ./coverage/lcov.info | ./node_modules/.bin/codecov
             bash .circleci/comment-artifacts.sh
         - store_artifacts:
@@ -56,19 +55,9 @@ jobs:
       steps:
         - attach_workspace:
             at: ~/linaria
-        - run: yarn --cwd website lint:css
-  integration-tests:
-      <<: *defaults
-      steps:
-        - attach_workspace:
-            at: ~/linaria
         - run: |
-            bash .circleci/install-chrome-deps.sh
-            yarn --cwd website build
-            yarn test:integration --forceExit
-        - store_artifacts:
-            path: website/__integration-tests__/__image_snapshots__/__diff_output__
-            destination: website-snapshot-diffs
+            yarn prepare
+            yarn --cwd website lint:css
 
 workflows:
   version: 2
@@ -79,9 +68,6 @@ workflows:
           requires:
             - install-dependencies
       - unit-tests:
-          requires:
-            - install-dependencies
-      - integration-tests:
           requires:
             - install-dependencies
       - lint-website:

@@ -61,6 +61,19 @@ it('imports JS files', () => {
   expect(mod.exports.result).toBe('The answer is 42');
 });
 
+it('imports TypeScript files', () => {
+  const mod = new Module(path.resolve(__dirname, '../__fixtures__/test.ts'));
+
+  mod.transform = transform;
+  mod.evaluate(dedent`
+    import answer from './sample-typescript';
+
+    export const result = 'The answer is ' + answer;
+  `);
+
+  expect(mod.exports.result).toBe('The answer is 27');
+});
+
 it('imports JSON files', () => {
   const mod = new Module(path.resolve(__dirname, '../__fixtures__/test.js'));
 
@@ -109,12 +122,34 @@ it('exports the path for non JS/JSON files', () => {
   expect(mod.require('./sample-asset.png')).toBe('./sample-asset.png');
 });
 
-it('throws when requiring native node modules', () => {
+it('returns module when requiring mocked builtin node modules', () => {
   const mod = new Module(path.resolve(__dirname, '../__fixtures__/test.js'));
 
-  expect(() => mod.require('fs')).toThrow(
-    'Unable to import "fs". Importing Node builtins is not supported in the sandbox.'
+  expect(mod.require('path')).toBe(require('path'));
+});
+
+it('returns null when requiring empty builtin node modules', () => {
+  const mod = new Module(path.resolve(__dirname, '../__fixtures__/test.js'));
+
+  expect(mod.require('fs')).toBe(null);
+});
+
+it('throws when requiring unmocked builtin node modules', () => {
+  const mod = new Module(path.resolve(__dirname, '../__fixtures__/test.js'));
+
+  expect(() => mod.require('perf_hooks')).toThrow(
+    'Unable to import "perf_hooks". Importing Node builtins is not supported in the sandbox.'
   );
+});
+
+it('has access to the global object', () => {
+  const mod = new Module(path.resolve(__dirname, '../__fixtures__/test.js'));
+
+  expect(() =>
+    mod.evaluate(dedent`
+    new global.Set();
+  `)
+  ).not.toThrow();
 });
 
 it("doesn't have access to the process object", () => {
@@ -122,9 +157,9 @@ it("doesn't have access to the process object", () => {
 
   expect(() =>
     mod.evaluate(dedent`
-    process.exit();
+    process.abort();
   `)
-  ).toThrow('process.exit is not a function');
+  ).toThrow('process.abort is not a function');
 });
 
 it('has access to NODE_ENV', () => {
@@ -177,4 +212,24 @@ it('has __dirname available', () => {
   `);
 
   expect(mod.exports).toBe(path.dirname(mod.filename));
+});
+
+it('changes resolve behaviour on overriding _resolveFilename', () => {
+  const originalResolveFilename = Module._resolveFilename;
+
+  Module._resolveFilename = id => (id === 'foo' ? 'bar' : id);
+
+  const mod = new Module(path.resolve(__dirname, '../__fixtures__/test.js'));
+
+  mod.evaluate(dedent`
+  module.exports = [
+    require.resolve('foo'),
+    require.resolve('test'),
+  ];
+  `);
+
+  // Restore old behavior
+  Module._resolveFilename = originalResolveFilename;
+
+  expect(mod.exports).toEqual(['bar', 'test']);
 });

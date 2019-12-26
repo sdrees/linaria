@@ -1,24 +1,22 @@
 /* @flow */
 
+import type { PluginOptions } from './utils/loadOptions';
+
 const generator = require('@babel/generator').default;
 const babel = require('@babel/core');
 const Module = require('./module');
 
-function defaultTransformModule(text) {
-  return babel.transformSync(text, {
-    caller: { name: 'linaria', evaluate: true },
-    filename: this.filename,
-    plugins: [
-      // Include this plugin to avoid extra config when using { module: false } for webpack
-      '@babel/plugin-transform-modules-commonjs',
-      '@babel/plugin-proposal-export-namespace-from',
-      // We don't support dynamic imports when evaluating, but don't wanna syntax error
-      // This will replace dynamic imports with an object that does nothing
-      require.resolve('./dynamic-import-noop'),
-      [require.resolve('./extract'), { evaluate: true }],
-    ],
-  });
-}
+const isAdded = (requirements, path) => {
+  if (requirements.some(req => req.path === path)) {
+    return true;
+  }
+
+  if (path.parentPath) {
+    return isAdded(requirements, path.parentPath);
+  }
+
+  return false;
+};
 
 const resolve = (path, t, requirements) => {
   const binding = path.scope.getBinding(path.node.name);
@@ -27,7 +25,7 @@ const resolve = (path, t, requirements) => {
     path.isReferenced() &&
     binding &&
     binding.kind !== 'param' &&
-    !requirements.some(req => req.path === binding.path)
+    !isAdded(requirements, binding.path)
   ) {
     let result;
 
@@ -45,7 +43,21 @@ const resolve = (path, t, requirements) => {
       case 'const':
       case 'let':
       case 'var': {
-        result = t.variableDeclaration(binding.kind, [binding.path.node]);
+        let decl;
+
+        // Replace SequenceExpressions (expr1, expr2, expr3, ...) with the last one
+        if (t.isSequenceExpression(binding.path.node.init)) {
+          const { node } = binding.path;
+
+          decl = t.variableDeclarator(
+            node.id,
+            node.init.expressions[node.init.expressions.length - 1]
+          );
+        } else {
+          decl = binding.path.node;
+        }
+
+        result = t.variableDeclaration(binding.kind, [decl]);
         break;
       }
       default:
@@ -71,11 +83,18 @@ const resolve = (path, t, requirements) => {
 };
 
 module.exports = function evaluate(
-  path /* : any */,
-  t /* : any */,
-  filename /* : string */,
-  transformModule /* : (text: string) => { code: string } */ = defaultTransformModule
+  path: any,
+  t: any,
+  filename: string,
+  transformer?: (text: string) => { code: string },
+  options?: PluginOptions
 ) {
+  if (t.isSequenceExpression(path)) {
+    // We only need to evaluate the last item in a sequence expression, e.g. (a, b, c)
+    // eslint-disable-next-line no-param-reassign
+    path = path.get('expressions')[path.node.expressions.length - 1];
+  }
+
   const requirements = [];
 
   if (t.isIdentifier(path)) {
@@ -87,41 +106,6 @@ module.exports = function evaluate(
       },
     });
   }
-
-  // Collect the list of dependencies that we import
-  const dependencies = requirements.reduce((deps, req) => {
-    if (t.isImportDeclaration(req.path.parentPath)) {
-      deps.push(req.path.parentPath.node.source.value);
-    } else {
-      req.path.traverse({
-        CallExpression(p) {
-          const { callee, arguments: args } = p.node;
-
-          let name;
-
-          if (callee.name === 'require' && args.length === 1) {
-            if (
-              args[0].type === 'Literal' ||
-              args[0].type === 'StringLiteral'
-            ) {
-              name = args[0].value;
-            } else if (
-              args[0].type === 'TemplateLiteral' &&
-              args[0].quasis.length === 1
-            ) {
-              name = args[0].quasis[0].value.cooked;
-            }
-          }
-
-          if (name) {
-            deps.push(name);
-          }
-        },
-      });
-    }
-
-    return deps;
-  }, []);
 
   const expression = t.expressionStatement(
     t.assignmentExpression(
@@ -163,7 +147,90 @@ module.exports = function evaluate(
 
   const m = new Module(filename);
 
-  m.transform = transformModule;
+  m.dependencies = [];
+  m.transform =
+    typeof transformer !== 'undefined'
+      ? transformer
+      : function transform(text) {
+          if (options && options.ignore && options.ignore.test(this.filename)) {
+            return { code: text };
+          }
+
+          const plugins = [
+            // Include these plugins to avoid extra config when using { module: false } for webpack
+            '@babel/plugin-transform-modules-commonjs',
+            '@babel/plugin-proposal-export-namespace-from',
+          ];
+
+          const defaults = {
+            caller: { name: 'linaria', evaluate: true },
+            filename: this.filename,
+            presets: [[require.resolve('./index'), options]],
+            plugins: [
+              ...plugins.map(name => require.resolve(name)),
+              // We don't support dynamic imports when evaluating, but don't wanna syntax error
+              // This will replace dynamic imports with an object that does nothing
+              require.resolve('./dynamic-import-noop'),
+            ],
+          };
+
+          const babelOptions =
+            // Shallow copy the babel options because we mutate it later
+            options && options.babelOptions ? { ...options.babelOptions } : {};
+
+          // If we programmtically pass babel options while there is a .babelrc, babel might throw
+          // We need to filter out duplicate presets and plugins so that this doesn't happen
+          // This workaround isn't full proof, but it's still better than nothing
+          ['presets', 'plugins'].forEach(field => {
+            babelOptions[field] = babelOptions[field]
+              ? babelOptions[field].filter(item => {
+                  // If item is an array it's a preset/plugin with options ([preset, options])
+                  // Get the first item to get the preset.plugin name
+                  // Otheriwse it's a plugin name (can be a function too)
+                  const name = Array.isArray(item) ? item[0] : item;
+
+                  if (
+                    // In our case, a preset might also be referring to linaria/babel
+                    // We require the file from internal path which is not the same one that we export
+                    // This case won't get caught and the preset won't filtered, even if they are same
+                    // So we add an extra check for top level linaria/babel
+                    name === 'linaria/babel' ||
+                    name === require.resolve('../../babel') ||
+                    // Also add a check for the plugin names we include for bundler support
+                    plugins.includes(name)
+                  ) {
+                    return false;
+                  }
+
+                  // Loop through the default presets/plugins to see if it already exists
+                  return !defaults[field].some(it =>
+                    // The default presets/plugins can also have nested arrays,
+                    Array.isArray(it) ? it[0] === name : it === name
+                  );
+                })
+              : [];
+          });
+
+          return babel.transformSync(text, {
+            // Passed options shouldn't be able to override the options we pass
+            // Linaria's plugins rely on these (such as filename to generate consistent hash)
+            ...babelOptions,
+            ...defaults,
+            presets: [
+              // Preset order is last to first, so add the extra presets to start
+              // This makes sure that our preset is always run first
+              ...babelOptions.presets,
+              ...defaults.presets,
+            ],
+            plugins: [
+              ...defaults.plugins,
+              // Plugin order is first to last, so add the extra presets to end
+              // This makes sure that the plugins we specify always run first
+              ...babelOptions.plugins,
+            ],
+          });
+        };
+
   m.evaluate(
     [
       // Use String.raw to preserve escapes such as '\n' in the code
@@ -177,6 +244,6 @@ module.exports = function evaluate(
 
   return {
     value: m.exports,
-    dependencies,
+    dependencies: ((m.dependencies: any): string[]),
   };
 };

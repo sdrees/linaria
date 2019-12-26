@@ -11,8 +11,8 @@ it('renders tag with display name and class name', () => {
   });
 
   expect(Test.displayName).toBe('TestComponent');
-  expect(Test.className).toBe('abcdefg');
-  expect(Test.extends).toBe('h1');
+  expect(Test.__linaria.className).toBe('abcdefg');
+  expect(Test.__linaria.extends).toBe('h1');
 
   const tree = renderer.create(<Test>This is a test</Test>);
 
@@ -28,8 +28,8 @@ it('renders component with display name and class name', () => {
   });
 
   expect(Test.displayName).toBe('TestComponent');
-  expect(Test.className).toBe('abcdefg');
-  expect(Test.extends).toBe(Custom);
+  expect(Test.__linaria.className).toBe('abcdefg');
+  expect(Test.__linaria.extends).toBe(Custom);
 
   const tree = renderer.create(<Test>This is a test</Test>);
 
@@ -96,12 +96,16 @@ it('replaces simple component with as prop', () => {
     class: 'abcdefg',
   });
 
-  const tree = renderer.create(<Test as="a">This is a test</Test>);
+  const tree = renderer.create(
+    <Test as="a" id="test" foo="bar">
+      This is a test
+    </Test>
+  );
 
   expect(tree.toJSON()).toMatchSnapshot();
 });
 
-it('replaces custom component with as prop', () => {
+it('replaces custom component with as prop for primitive', () => {
   const Custom = props => <div {...props} style={{ fontSize: 12 }} />;
 
   const Test = styled(Custom)({
@@ -109,7 +113,28 @@ it('replaces custom component with as prop', () => {
     class: 'abcdefg',
   });
 
-  const tree = renderer.create(<Test as="a">This is a test</Test>);
+  const tree = renderer.create(
+    <Test as="a" id="test" foo="bar">
+      This is a test
+    </Test>
+  );
+
+  expect(tree.toJSON()).toMatchSnapshot();
+});
+
+it('replaces primitive with as prop for custom component', () => {
+  const Custom = props => <div {...props} style={{ fontSize: 12 }} />;
+
+  const Test = styled('div')({
+    name: 'TestComponent',
+    class: 'abcdefg',
+  });
+
+  const tree = renderer.create(
+    <Test as={Custom} id="test" foo="bar">
+      This is a test
+    </Test>
+  );
 
   expect(tree.toJSON()).toMatchSnapshot();
 });
@@ -142,6 +167,47 @@ it('forwards as prop when wrapping another styled component', () => {
   });
 
   const tree = renderer.create(<Second as="a">This is a test</Second>);
+
+  expect(tree.toJSON()).toMatchSnapshot();
+});
+
+it('filters unknown html attributes for HTML tag', () => {
+  const Test = styled('div')({
+    name: 'TestComponent',
+    class: 'abcdefg',
+  });
+
+  const tree = renderer.create(
+    <Test unknownAttribute="voila">This is a test</Test>
+  );
+
+  expect(tree.toJSON()).toMatchSnapshot();
+});
+
+it('does not filter attributes for custom elements', () => {
+  const Test = styled('my-element')({
+    name: 'TestComponent',
+    class: 'abcdefg',
+  });
+
+  const tree = renderer.create(
+    <Test unknownAttribute="voila">This is a test</Test>
+  );
+
+  expect(tree.toJSON()).toMatchSnapshot();
+});
+
+it('does not filter attributes for components', () => {
+  const Custom = props => <div>{props.unknownAttribute}</div>;
+
+  const Test = styled(Custom)({
+    name: 'TestComponent',
+    class: 'abcdefg',
+  });
+
+  const tree = renderer.create(
+    <Test unknownAttribute="voila">This is a test</Test>
+  );
 
   expect(tree.toJSON()).toMatchSnapshot();
 });
