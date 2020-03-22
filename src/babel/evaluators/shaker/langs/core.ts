@@ -137,6 +137,11 @@ export const visitors: Visitors = {
       // `id` is an identifier which depends on the function declaration
       this.graph.addEdge(node.id, node);
     }
+
+    if (t.isFunctionExpression(node) && node.id !== null) {
+      // keep function name in expressions like `const a = function a();`
+      this.graph.addEdge(node, node.id);
+    }
   },
 
   /*
@@ -242,6 +247,22 @@ export const visitors: Visitors = {
         this.graph.addEdge(node, child);
       }
     });
+  },
+
+  /*
+   * ForInStatement
+   * for (const k in o) { body }
+   */
+  ForInStatement(this: GraphBuilderState, node: t.ForInStatement) {
+    this.baseVisit(node);
+
+    if (node.body) {
+      this.graph.addEdge(node.body, node);
+      this.graph.addEdge(node, node.body);
+      this.graph.addEdge(node.body, node.left);
+    }
+
+    this.graph.addEdge(node.left, node.right);
   },
 
   /*
@@ -452,6 +473,22 @@ export const visitors: Visitors = {
             // eg. require('../slugify').default
             this.graph.imports.get(source)!.push(parent.property);
           } else {
+            if (
+              t.isCallExpression(parent) &&
+              t.isIdentifier(parent.callee) &&
+              typeof parent.callee.name === 'string'
+            ) {
+              if (parent.callee.name.startsWith('_interopRequireDefault')) {
+                this.graph.importTypes.set(source, 'default');
+              } else if (
+                parent.callee.name.startsWith('_interopRequireWildcard')
+              ) {
+                this.graph.importTypes.set(source, 'wildcard');
+              } else {
+                // What I've missed?
+              }
+            }
+
             // The whole namespace was imported. We will know later, what exactly we need.
             // eg. const slugify = require('../slugify');
             this.graph.importAliases.set(local, source);
@@ -506,14 +543,12 @@ export const identifierHandlers: IdentifierHandlers = {
   declare: [
     ['CatchClause', 'param'],
     ['Function', 'params'],
+    ['FunctionExpression', 'id'],
     ['RestElement', 'argument'],
     ['ThrowStatement', 'argument'],
     ['VariableDeclarator', 'id'],
   ],
-  keep: [
-    ['FunctionExpression', 'id'],
-    ['ObjectProperty', 'key'],
-  ],
+  keep: [['ObjectProperty', 'key']],
   refer: [
     ['ArrayExpression', 'elements'],
     ['AssignmentExpression', 'left', 'right'],
