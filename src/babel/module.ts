@@ -60,7 +60,7 @@ const builtins = {
   zlib: true,
 };
 
-// Separate cache for evaled modules
+// Separate cache for evaluated modules
 let cache: { [id: string]: Module } = {};
 
 const NOOP = () => {};
@@ -250,9 +250,7 @@ class Module {
       })
       .reverse();
 
-    const cacheKey = only
-      ? `${this.filename}:${only.join(',')}`
-      : this.filename;
+    const cacheKey = [this.filename, ...(only ?? [])];
 
     if (EvalCache.has(cacheKey, text)) {
       this.exports = EvalCache.get(cacheKey, text);
@@ -265,7 +263,7 @@ class Module {
       action === 'ignore' ||
       (this.options.ignore && this.options.ignore.test(filename))
     ) {
-      debug(`Ignore ${filename}`);
+      debug('module:ignore', `${filename}`);
       code = text;
     } else {
       // Action can be a function or a module name
@@ -278,7 +276,8 @@ class Module {
       this.imports = imports;
 
       debug(
-        `Evaluate ${this.filename} (only ${(only || []).join(', ')}):\n${code}`
+        'module:evaluate',
+        `${this.filename} (only ${(only || []).join(', ')}):\n${code}`
       );
     }
 

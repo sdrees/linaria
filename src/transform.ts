@@ -3,9 +3,32 @@ import * as babel from '@babel/core';
 import stylis from 'stylis';
 import { SourceMapGenerator, Mapping } from 'source-map';
 import loadOptions from './babel/utils/loadOptions';
+import { debug } from './babel/utils/logger';
 import { LinariaMetadata, Options, PreprocessorFn, Result } from './types';
 
 const STYLIS_DECLARATION = 1;
+const posixSep = path.posix.sep;
+const babelPreset = require.resolve('./babel');
+
+export function transformUrl(
+  url: string,
+  outputFilename: string,
+  sourceFilename: string,
+  platformPath: typeof path = path
+) {
+  // Replace asset path with new path relative to the output CSS
+  const relative = platformPath.relative(
+    platformPath.dirname(outputFilename),
+    // Get the absolute path to the asset from the path relative to the JS file
+    platformPath.resolve(platformPath.dirname(sourceFilename), url)
+  );
+
+  if (platformPath.sep === posixSep) {
+    return relative;
+  }
+
+  return relative.split(platformPath.sep).join(posixSep);
+}
 
 export default function transform(code: string, options: Options): Result {
   // Check if the file contains `css` or `styled` words first
@@ -17,12 +40,17 @@ export default function transform(code: string, options: Options): Result {
     };
   }
 
+  debug(
+    'transform',
+    `${options.filename} to ${options.outputFilename}\n${code}`
+  );
+
   const pluginOptions = loadOptions(options.pluginOptions);
 
   // Parse the code first so babel uses user's babel config for parsing
   // We don't want to use user's config when transforming the code
   const ast = babel.parseSync(code, {
-    ...(pluginOptions ? pluginOptions.babelOptions : null),
+    ...(pluginOptions?.babelOptions ?? null),
     filename: options.filename,
     caller: { name: 'linaria' },
   });
@@ -32,7 +60,7 @@ export default function transform(code: string, options: Options): Result {
     code,
     {
       filename: options.filename,
-      presets: [[require.resolve('./babel'), pluginOptions]],
+      presets: [[babelPreset, pluginOptions]],
       babelrc: false,
       configFile: false,
       sourceMaps: true,
@@ -80,16 +108,9 @@ export default function transform(code: string, options: Options): Result {
             // When writing to a file, we need to adjust the relative paths inside url(..) expressions
             // It'll allow css-loader to resolve an imported asset properly
             return decl.replace(
-              /\b(url\()(\.[^)]+)(\))/g,
-              (match, p1, p2, p3) =>
-                p1 +
-                // Replace asset path with new path relative to the output CSS
-                path.relative(
-                  path.dirname(outputFilename),
-                  // Get the absolute path to the asset from the path relative to the JS file
-                  path.resolve(path.dirname(options.filename), p2)
-                ) +
-                p3
+              /\b(url\((["']?))(\.[^)]+?)(\2\))/g,
+              (match, p1, p2, p3, p4) =>
+                p1 + transformUrl(p3, outputFilename, options.filename) + p4
             );
           }
 
@@ -121,10 +142,15 @@ export default function transform(code: string, options: Options): Result {
     rules,
     replacements,
     dependencies,
-    sourceMap: map,
+    sourceMap: map
+      ? {
+          ...map,
+          version: map.version.toString(),
+        }
+      : null,
 
     get cssSourceMapText() {
-      if (mappings && mappings.length) {
+      if (mappings?.length) {
         const generator = new SourceMapGenerator({
           file: options.filename.replace(/\.js$/, '.css'),
         });
