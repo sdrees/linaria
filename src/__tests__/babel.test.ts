@@ -16,6 +16,7 @@ const transpile = async (
     presets: [[require.resolve('../babel'), opts]],
     plugins: ['@babel/plugin-syntax-jsx'],
     filename: join(__dirname, 'app/index.js'),
+    configFile: false,
   }))!;
 
 it('transpiles styled template literal with object', async () => {
@@ -120,7 +121,7 @@ it('outputs valid CSS classname', async () => {
     dedent`
     import { styled } from 'linaria/react';
 
-    export const ᾩPage$Title = styled.h1\`
+    export const ΩPage$Title = styled.h1\`
       font-size: 14px;
     \`;
     `
@@ -335,6 +336,22 @@ it('does not output CSS if none present', async () => {
 
       const title = String.raw\`This is something\`;
       `
+  );
+
+  expect(code).toMatchSnapshot();
+  expect(metadata).toMatchSnapshot();
+});
+
+it('does not output CSS property when value is a blank string', async () => {
+  const { code, metadata } = await transpile(
+    dedent`
+    import { css } from 'linaria';
+
+    export const title = css\`
+      font-size: ${''};
+      margin: 6px;
+    \`;
+    `
   );
 
   expect(code).toMatchSnapshot();

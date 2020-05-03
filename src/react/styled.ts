@@ -1,3 +1,9 @@
+/**
+ * This file contains an runtime version of `styled` component. Responsibilities of the component are:
+ * - returns ReactElement based on HTML tag used with `styled` or custom React Component
+ * - injects classNames for the returned component
+ * - injects CSS variables used to define dynamic styles based on props
+ */
 import * as React from 'react'; // eslint-disable-line import/no-extraneous-dependencies
 import validAttr from '@emotion/is-prop-valid';
 import { cx } from '../index';
@@ -61,7 +67,6 @@ function styled(tag: any): any {
 
     const render = (props: any, ref: any) => {
       const { as: component = tag, class: className, ...rest } = props;
-
       let filteredProps;
 
       // Check if it's an HTML tag and not a custom element
@@ -92,7 +97,9 @@ function styled(tag: any): any {
 
         // eslint-disable-next-line guard-for-in
         for (const name in vars) {
-          const [result, unit = ''] = vars[name];
+          const variable = vars[name];
+          const result = variable[0];
+          const unit = variable[1] || '';
           const value = typeof result === 'function' ? result(props) : result;
 
           warnIfInvalid(value, options.name);
@@ -110,7 +117,6 @@ function styled(tag: any): any {
 
         return React.createElement(tag, filteredProps);
       }
-
       return React.createElement(component, filteredProps);
     };
 

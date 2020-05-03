@@ -1,3 +1,8 @@
+/**
+ * This file handles transforming template literals to class names or styled components and generates CSS content.
+ * It uses CSS code from template literals and evaluated values of lazy dependencies stored in ValueCache.
+ */
+
 /* eslint-disable no-param-reassign */
 
 import { types } from '@babel/core';
@@ -140,6 +145,11 @@ export default function getTemplateProcessor(options: StrictOptions) {
           ) {
             const value = valueCache.get(ex.node);
             throwIfInvalid(value, ex);
+
+            // Skip the blank string instead of throwing an error
+            if (value === '') {
+              return;
+            }
 
             if (value && typeof value !== 'function') {
               // Only insert text for non functions
