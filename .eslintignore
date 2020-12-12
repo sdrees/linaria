@@ -1,8 +1,10 @@
 __fixtures__/
 coverage/
-flow-typed/
 lib/
+esm/
+packages/*/types/
 dist/
 build/
 node_modules/
 vendor/
+examples/

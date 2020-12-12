@@ -1,10 +1,10 @@
 /* @flow */
 
+import { styled } from '@linaria/react';
 import React from 'react';
-import { styled } from 'linaria/react';
-import Container from './Container';
 import constants from '../styles/constants';
 import { media } from '../styles/utils';
+import Container from './Container';
 
 export default function Header() {
   return (

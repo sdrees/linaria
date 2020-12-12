@@ -37,13 +37,13 @@ Zero-runtime CSS in JS library.
 ## Installation
 
 ```sh
-npm install linaria
+npm install @linaria/core @linaria/react @linaria/babel-preset @linaria/shaker
 ```
 
 or
 
 ```sh
-yarn add linaria
+yarn add @linaria/core @linaria/react @linaria/babel-preset @linaria/shaker
 ```
 
 ## Setup
@@ -52,15 +52,21 @@ Linaria currently supports webpack and Rollup to extract the CSS at build time. 
 
 - [webpack](/docs/BUNDLERS_INTEGRATION.md#webpack)
 - [Rollup](/docs/BUNDLERS_INTEGRATION.md#rollup)
+- [Svelte](/docs/BUNDLERS_INTEGRATION.md#svelte)
 
-Optionally, add the `linaria/babel` preset to your Babel configuration at the end of the presets list to avoid errors when importing the components in your server code or tests:
+Or configure Linaria with one of the following integrations:
+
+- [Preact](/docs/CONFIGURATION.md#preact)
+- [Gatsby](/docs/CONFIGURATION.md#gatsby)
+
+Optionally, add the `@linaria` preset to your Babel configuration at the end of the presets list to avoid errors when importing the components in your server code or tests:
 
 ```json
 {
   "presets": [
     "@babel/preset-env",
     "@babel/preset-react",
-    "linaria/babel"
+    "@linaria"
   ]
 }
 ```
@@ -72,7 +78,7 @@ See [Configuration](/docs/CONFIGURATION.md) to customize how Linaria processes y
 Linaria can be used with any framework, with additional helpers for React. The basic syntax looks like this:
 
 ```js
-import { css } from 'linaria';
+import { css } from '@linaria/core';
 import { modularScale, hiDPI } from 'polished';
 import fonts from './fonts';
 
@@ -96,7 +102,7 @@ You can use imported variables and functions for logic inside the CSS code. They
 If you're using [React](https://reactjs.org/), you can use the `styled` helper, which makes it easy to write React components with dynamic styles with a styled-component like syntax:
 
 ```js
-import { styled } from 'linaria/react';
+import { styled } from '@linaria/react';
 import { families, sizes } from './fonts';
 
 // Write your styles in `styled` tag
@@ -164,7 +170,7 @@ Take a look on [Contributing](CONTRIBUTING.md) docs to check how you can run Lin
   For example:
 
   ```js
-  import { css } from 'linaria';
+  import { css } from '@linaria/core';
   import colors from './colors';
 
   const title = css`
@@ -189,6 +195,11 @@ Take a look on [Contributing](CONTRIBUTING.md) docs to check how you can run Lin
 ### Webstorm
 
 - Syntax Highlighting & Autocompletion - [webstorm-styled-components](https://github.com/styled-components/webstorm-styled-components)
+
+### Sublime Text
+
+- Syntax Highlighting & Autocompletion - [Naomi](https://packagecontrol.io/packages/Naomi), [JSCustom](https://packagecontrol.io/packages/JSCustom) (refer to document on how to turn on Styled Component syntax)
+- Linting - [SublimeLinter-stylelint](https://packagecontrol.io/packages/SublimeLinter-stylelint), [LSP Stylelint](https://packagecontrol.io/packages/LSP-stylelint)
 
 ## Recommended Libraries
 

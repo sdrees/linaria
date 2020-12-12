@@ -1,5 +1,5 @@
-const webpack = require('webpack'); // eslint-disable-line import/no-extraneous-dependencies
 const path = require('path');
+const webpack = require('webpack'); // eslint-disable-line import/no-extraneous-dependencies
 const MiniCssExtractPlugin = require('mini-css-extract-plugin'); // eslint-disable-line import/no-extraneous-dependencies
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -32,7 +32,7 @@ module.exports = {
         use: [
           { loader: 'babel-loader' },
           {
-            loader: require.resolve('../lib/loader'),
+            loader: require.resolve('@linaria/webpack4-loader'),
             options: { sourceMap: dev },
           },
         ],
