@@ -180,6 +180,10 @@ Take a look on [Contributing](CONTRIBUTING.md) docs to check how you can run Lin
 
   Here, there should be no side-effects in the `colors.js` file, or any file it imports. We recommend to move helpers and shared configuration to files without any side-effects.
 
+## Interoperability with other CSS-in-JS libraries
+
+Linaria can work together with other CSS-in-JS libraries out-of-the-box. However, if you want to use styled components from Linaria as selectors in `styled-components`/`emotion`, you need to use [@linaria/interop](/packages/interop/README.md)    
+
 ## Editor Plugins
 
 ### VSCode
@@ -225,6 +229,8 @@ Special thanks to [@kentcdodds](https://github.com/kentcdodds) for his babel plu
 ## Made with ❤️ at Callstack
 
 Linaria is an open source project and will always remain free to use. If you think it's cool, please star it 🌟. [Callstack](https://callstack.com) is a group of React and React Native geeks, contact us at [hello@callstack.com](mailto:hello@callstack.com) if you need any help with these or just want to say hi!
+
+Like the project? ⚛️ [Join the team](https://callstack.com/careers/?utm_campaign=Senior_RN&utm_source=github&utm_medium=readme) who does amazing stuff for clients and drives React Native Open Source! 🔥
 
 ## Contributors
 

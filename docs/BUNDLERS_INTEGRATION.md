@@ -76,7 +76,7 @@ new MiniCssExtractPlugin({
 });
 ```
 
-This will extract the CSS from all files into a single `styles.css`. Then you can to link to this file in your HTML file manually or use something like [`HTMLWebpackPlugin`](https://github.com/jantimon/html-webpack-plugin).
+This will extract the CSS from all files into a single `styles.css`. Then you can link to this file in your HTML file manually or use something like [`HTMLWebpackPlugin`](https://github.com/jantimon/html-webpack-plugin).
 
 It will also hot reload your styles when in a development environment.
 
@@ -226,6 +226,37 @@ You can pass options to the loader like so:
     cacheDirectory: '.linaria-cache',
   },
 }
+```
+
+### esbuild
+
+To use Linaria with esbuild, you don't need to install any external package since esbuild handles CSS by itself:
+
+```sh
+yarn add --dev @linaria/esbuild
+```
+
+Then add it to your esbuild config:
+
+```js
+import linaria from '@linaria/esbuild';
+import esbuild from 'esbuild';
+
+const prod = process.env.NODE_ENV === 'production';
+
+esbuild
+  .build({
+    entryPoints: ['src/index.ts'],
+    outdir: 'dist',
+    bundle: true,
+    minify: prod,
+    plugins: [
+      linaria({
+        sourceMap: prod,
+      }),
+    ],
+  })
+  .catch(() => process.exit(1));
 ```
 
 ### Rollup

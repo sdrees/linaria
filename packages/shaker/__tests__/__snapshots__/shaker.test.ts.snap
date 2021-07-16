@@ -336,6 +336,27 @@ Dependencies: NA
 
 `;
 
+exports[`shaker evaluates imported typescript enums 1`] = `
+"import { styled } from '@linaria/react';
+import { Colors } from '@linaria/babel-preset/__fixtures__/enums';
+export const Title = /*#__PURE__*/styled(\\"h1\\")({
+  name: \\"Title\\",
+  class: \\"Title_taxxqrn\\"
+});"
+`;
+
+exports[`shaker evaluates imported typescript enums 2`] = `
+
+CSS:
+
+.Title_taxxqrn {
+  color: #27509A;
+}
+
+Dependencies: @linaria/babel-preset/__fixtures__/enums
+
+`;
+
 exports[`shaker evaluates interpolations with sequence expression 1`] = `
 "import { styled } from '@linaria/react';
 export const Title = /*#__PURE__*/styled(\\"h1\\")({
@@ -416,18 +437,30 @@ Dependencies: @linaria/babel-preset/__fixtures__/slugify
 `;
 
 exports[`shaker evaluates typescript enums 1`] = `
-"var Colors;
+"import { styled } from '@linaria/react';
+var Colors;
 
 (function (Colors) {
   Colors[\\"BLUE\\"] = \\"#27509A\\";
 })(Colors || (Colors = {}));
 
-const Title = styled.h1\`
-  color: \${Colors.BLUE};
-\`;"
+export const Title = /*#__PURE__*/styled(\\"h1\\")({
+  name: \\"Title\\",
+  class: \\"Title_taxxqrn\\"
+});"
 `;
 
-exports[`shaker evaluates typescript enums 2`] = `Object {}`;
+exports[`shaker evaluates typescript enums 2`] = `
+
+CSS:
+
+.Title_taxxqrn {
+  color: #27509A;
+}
+
+Dependencies: NA
+
+`;
 
 exports[`shaker generates stable class names 1`] = `
 "import { styled } from '@linaria/react';
@@ -1066,7 +1099,7 @@ CSS:
   }
 }
 
-Dependencies: @babel/runtime/helpers/interopRequireWildcard, @linaria/babel-preset/__fixtures__/complex-component
+Dependencies: @babel/runtime/helpers/typeof, @linaria/babel-preset/__fixtures__/complex-component
 
 `;
 
@@ -1128,7 +1161,7 @@ exports[`shaker throws codeframe error when evaluation fails 1`] = `
   because it cannot be statically determined in which context you use them.
   That's why some variables may be not defined during evaluation.
       
-  4 | 
+  4 |
   5 | export const Title = styled.h1\`
 > 6 |   font-size: \${foo()}px;
     |                ^^^^^
@@ -1142,7 +1175,7 @@ exports[`shaker throws if couldn't determine a display name 1`] = `
 - Is a prop in a JSX element
 
   1 | import { styled } from '@linaria/react';
-  2 | 
+  2 |
 > 3 | export default styled.h1\`
     |                ^
   4 |   font-size: 14px;
@@ -1151,7 +1184,7 @@ exports[`shaker throws if couldn't determine a display name 1`] = `
 
 exports[`shaker throws when interpolation evaluates to NaN 1`] = `
 "<<DIRNAME>>/source.js: The expression evaluated to 'NaN', which is probably a mistake. If you want it to be inserted into CSS, explicitly cast or transform the value to a string, e.g. - 'String(height)'.
-  4 | 
+  4 |
   5 | export const Title = styled.h1\`
 > 6 |   height: \${height}px;
     |             ^^^^^^
@@ -1160,7 +1193,7 @@ exports[`shaker throws when interpolation evaluates to NaN 1`] = `
 
 exports[`shaker throws when interpolation evaluates to null 1`] = `
 "<<DIRNAME>>/source.js: The expression evaluated to 'null', which is probably a mistake. If you want it to be inserted into CSS, explicitly cast or transform the value to a string, e.g. - 'String(color)'.
-  4 | 
+  4 |
   5 | export const Title = styled.h1\`
 > 6 |   color: \${color};
     |            ^^^^^
@@ -1169,7 +1202,7 @@ exports[`shaker throws when interpolation evaluates to null 1`] = `
 
 exports[`shaker throws when interpolation evaluates to undefined 1`] = `
 "<<DIRNAME>>/source.js: The expression evaluated to 'undefined', which is probably a mistake. If you want it to be inserted into CSS, explicitly cast or transform the value to a string, e.g. - 'String(fontSize)'.
-  4 | 
+  4 |
   5 | export const Title = styled.h1\`
 > 6 |   font-size: \${fontSize};
     |                ^^^^^^^^

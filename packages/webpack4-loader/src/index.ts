@@ -25,6 +25,16 @@ const lernaRoot =
 
 type LoaderContext = Parameters<typeof loaderUtils.getOptions>[0];
 
+const castSourceMap = <T extends { version: number } | { version: string }>(
+  sourceMap: T | null | undefined
+) =>
+  sourceMap
+    ? {
+        ...sourceMap,
+        version: sourceMap.version.toString(),
+      }
+    : undefined;
+
 export default function webpack4Loader(
   this: LoaderContext,
   content: string,
@@ -34,11 +44,17 @@ export default function webpack4Loader(
 
   EvalCache.clearForFile(this.resourcePath);
 
+  const resolveOptionsDefaults = {
+    conditionNames: ['require'],
+    extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
+  };
+
   const {
     sourceMap = undefined,
     cacheDirectory = '.linaria-cache',
     preprocessor = undefined,
     extension = '.linaria.css',
+    resolveOptions = {},
     ...rest
   } = loaderUtils.getOptions(this) || {};
 
@@ -57,23 +73,21 @@ export default function webpack4Loader(
     )
   );
 
-  const resolveOptions = {
-    extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-  };
-
   const resolveSync = enhancedResolve.create.sync(
     // this._compilation is a deprecated API
     // However there seems to be no other way to access webpack's resolver
     // There is this.resolve, but it's asynchronous
     // Another option is to read the webpack.config.js, but it won't work for programmatic usage
     // This API is used by many loaders/plugins, so hope we're safe for a while
-    this._compilation?.options.resolve
-      ? {
-          ...resolveOptions,
-          alias: this._compilation.options.resolve.alias,
-          modules: this._compilation.options.resolve.modules,
-        }
-      : resolveOptions
+    {
+      ...resolveOptionsDefaults,
+      ...((this._compilation?.options.resolve && {
+        alias: this._compilation.options.resolve.alias,
+        modules: this._compilation.options.resolve.modules,
+      }) ||
+        {}),
+      ...resolveOptions,
+    }
   );
 
   let result;
@@ -82,8 +96,11 @@ export default function webpack4Loader(
 
   try {
     // Use webpack's resolution when evaluating modules
-    Module._resolveFilename = (id, { filename }) =>
-      resolveSync(path.dirname(filename), id);
+    Module._resolveFilename = (id, { filename }) => {
+      const result = resolveSync(path.dirname(filename), id);
+      this.addDependency(result);
+      return result;
+    };
 
     result = transform(content, {
       filename: path.relative(process.cwd(), this.resourcePath),
@@ -141,10 +158,10 @@ export default function webpack4Loader(
         this,
         outputFilename
       )});`,
-      result.sourceMap ?? undefined
+      castSourceMap(result.sourceMap)
     );
     return;
   }
 
-  this.callback(null, result.code, result.sourceMap ?? undefined);
+  this.callback(null, result.code, castSourceMap(result.sourceMap));
 }
